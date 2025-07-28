@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alarm Clock App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1f1f1f;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #000;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #currentTime {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    input, select, button {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 5px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .alarm {
+      background: #292929;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .alarm time {
+      font-size: 1.2rem;
+    }
+    .alarm input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+    .ringing {
+      background-color: #d32f2f;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    .ringing button {
+      background-color: white;
+      color: #d32f2f;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1> Alarm Clock</h1>
+    <div id="currentTime">__:__:__</div>
+
+    <form id="alarmForm">
+      <input type="time" id="alarmTime" required />
+      <select id="alarmTone">
+        <option value="tone1.mp3">Beep</option>
+        <option value="tone2.mp3">Digital</option>
+        <option value="tone3.mp3">Classic</option>
+      </select>
+      <button type="submit">Set Alarm</button>
+    </form>
+
+    <div id="alarmList"></div>
+
+    <div id="alarmRing" class="ringing" style="display:none;">
+      <h3> Alarm Ringing!</h3>
+      <button onclick="snoozeAlarm()">Snooze 5 Min</button>
+      <button onclick="dismissAlarm()">Dismiss</button>
+    </div>
+  </div>
+
+  
+  <audio id="alarmAudio" src=""></audio>
+
+  <script>
+    let alarms = JSON.parse(localStorage.getItem("alarms")) || [];
+    let currentAlarmIndex = null;
+    const alarmAudio = document.getElementById("alarmAudio");
+
+    function updateCurrentTime() {
+      const now = new Date();
+      document.getElementById("currentTime").innerText = now.toLocaleTimeString();
+      checkAlarms(now);
+    }
+
+    function renderAlarms() {
+      const list = document.getElementById("alarmList");
+      list.innerHTML = "";
+
+      alarms.forEach((alarm, index) => {
+        const div = document.createElement("div");
+        div.className = "alarm";
+        div.innerHTML = `
+          <time>${alarm.time}</time>
+          <label>
+            <input type="checkbox" ${alarm.active ? "checked" : ""} onchange="toggleAlarm(${index})" />
+          </label>
+        `;
+        list.appendChild(div);
+      });
+
+      localStorage.setItem("alarms", JSON.stringify(alarms));
+    }
+
+    function toggleAlarm(index) {
+      alarms[index].active = !alarms[index].active;
+      renderAlarms();
+    }
+
+    document.getElementById("alarmForm").onsubmit = function(e) {
+      e.preventDefault();
+      const time = document.getElementById("alarmTime").value;
+      const tone = document.getElementById("alarmTone").value;
+
+      alarms.push({ time, tone, active: true });
+      renderAlarms();
+      alarmForm.reset();
+    };
+
+    function checkAlarms(now) {
+      const currentTime = now.toTimeString().substring(0, 5);
+
+      alarms.forEach((alarm, index) => {
+        if (alarm.active && alarm.time === currentTime) {
+          triggerAlarm(index);
+        }
+      });
+    }
+
+    function triggerAlarm(index) {
+      currentAlarmIndex = index;
+      document.getElementById("alarmRing").style.display = "block";
+      alarmAudio.src = alarms[index].tone;
+      alarmAudio.loop = true;
+      alarmAudio.play();
+      alarms[index].active = false; 
+      renderAlarms();
+    }
+
+    function dismissAlarm() {
+      alarmAudio.pause();
+      document.getElementById("alarmRing").style.display = "none";
+      currentAlarmIndex = null;
+    }
+
+    function snoozeAlarm() {
+      if (currentAlarmIndex !== null) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+        const snoozedTime = now.toTimeString().substring(0, 5);
+        alarms[currentAlarmIndex].time = snoozedTime;
+        alarms[currentAlarmIndex].active = true;
+        renderAlarms();
+      }
+      dismissAlarm();
+    }
+
+   
+    renderAlarms();
+    setInterval(updateCurrentTime, 1000);
+  </script>
+</body>
+</html>
